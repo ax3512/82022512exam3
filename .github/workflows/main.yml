@@ -1,60 +1,83 @@
-Java with Maven
+name: Java CI with Gradle
 
 on: workflow_dispatch
 
 env:
   IMAGE_NAME: 82022512exam3
-  
-- uses: actions/checkout@v4
-  with:
-    token: ${{ secrets.REPO_TOKEN }}
-	
-- name: Set up JDK 17
-  uses: actions/setup-java@v4
-  with:
-    java-version: '17'
-    distribution: 'temurin'
-    cache: maven
-- name: Setup Kustomize
-  uses: imranismail/setup-kustomize@v1
 
-- name: Build with Maven
-  run: mvn -B package --file pom.xml
-- name: 'Gen Version'
-  id: gen-version
-  run: |
-    echo "::set-output name=VERSION::`date +%Y%m%d%H%M`"
-- name: 'ACR login'
-  uses: azure/docker-login@v1
-  with:
-    login-server: ${{ secrets.BASEACR_LOGIN_SERVER }}
-    username: ${{ secrets.REGISTRY_USERNAME }}
-    password: ${{ secrets.REGISTRY_PASSWORD }}
+jobs:
+  build:
 
-- name: 'Build & Tag Image'
-  run: |
-    docker build -t ${{ secrets.BASEACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.gen-version.outputs.VERSION }} -f Dockerfile-maven .
-    docker tag ${{ secrets.BASEACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.gen-version.outputs.VERSION }} ${{ secrets.STAPACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.gen-version.outputs.VERSION }}
-	
-- name: 'Push image'
-  uses: azure/docker-login@v1
-  with:
-    login-server: ${{ secrets.STAPACR_LOGIN_SERVER }}
-    username: ${{ secrets.REGISTRY_USERNAME2 }}
-    password: ${{ secrets.REGISTRY_PASSWORD2 }}
-- run: |
-    docker push ${{ secrets.STAPACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.gen-version.outputs.VERSION }}
+    runs-on: ubuntu-latest
 
-- name: Update Kubernetes resources
-  run: |
-    cd manifests/overlays/prod
-    kustomize edit set image ${{ secrets.STAPACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.gen-version.outputs.VERSION }}
-    cat kustomization.yaml
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.REPO_TOKEN }}
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
-- name: Commit files
-  run: |
-    cd manifests
-    git config --global user.email "sexyami11@naver.com"
-    git config --global user.name "kkp"
-    git commit -am "Update image tag"
-    git push -u origin main
+    # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
+    # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@dbbdc275be76ac10734476cc723d82dfe7ec6eda # v3.4.2
+
+    - name: Remove default github maven configuration
+    # This step is a workaround to avoid a decryption issue of Beam's
+    # net.linguica.gradle.maven.settings plugin and github's provided maven
+    # settings.xml file
+      run: rm ~/.m2/settings.xml
+
+    - name: Build with Gradle Wrapper
+      run: gradle build
+      env:
+          MAVEN_USERNAME: ${{ secrets.REPO_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.REPO_TOKEN }}
+
+    - name: Setup Kustomize
+      uses: imranismail/setup-kustomize@v1
+
+    - name: 'Gen Version'
+      id: gen-version
+      run: |
+        echo "::set-output name=VERSION::`date +%Y%m%d%H%M`"
+
+    - name: 'ACR login'
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+    
+    - name: 'Build & Tag Image'
+      run: |
+            docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.gen-version.outputs.VERSION }} -f Dockerfile-gradle .
+            docker tag ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.gen-version.outputs.VERSION }} ${{ secrets.STAP_ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.gen-version.outputs.VERSION }}
+
+    - name: 'Push image'
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.STAP_ACR_LOGIN_SERVER }}
+        username: ${{ secrets.REGISTRY_USERNAME2 }}
+        password: ${{ secrets.REGISTRY_PASSWORD2 }}
+
+    - run: |
+          docker push ${{ secrets.STAP_ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.gen-version.outputs.VERSION }}
+          
+    - name: Update Kubernetes resources
+      run: |
+          cd manifests/overlays/prod
+          kustomize edit set image ${{ secrets.STAP_ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.gen-version.outputs.VERSION }}
+          cat kustomization.yaml
+
+    - name: Commit files
+      run: |
+          cd manifests
+          git config --global user.email "sexyami11@naver.com"
+          git config --global user.name "kkp"
+          git commit -am "Update image tag"
+          git push -u origin main
