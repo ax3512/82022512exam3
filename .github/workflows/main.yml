@@ -6,8 +6,11 @@ env:
   IMAGE_NAME: 82022512exam3
 
 jobs:
-  build: workflow_dispatch
-  
+  build: 
+    runs-on: ubuntu-latest
+
+    steps:
+    
     - uses: actions/checkout@v4
       with:
         token: ${{ secrets.REPO_TOKEN }}
@@ -57,7 +60,7 @@ jobs:
     - name: Commit files
       run: |
         cd manifests
-        git config --global user.email "sexyami11@naver.com"
-        git config --global user.name "kkp"
+        git config --global user.email "github-actions@github.com"
+        git config --global user.name "github-actions"
         git commit -am "Update image tag"
         git push -u origin main
