@@ -1,7 +1,7 @@
 apiVersion : apps/v1
 kind: Deployment
 metadata:
-  name: cloud-sample 
+  name: 82022512exam3-cloud-sample 
 spec:
   replicas: 1
   selector:
