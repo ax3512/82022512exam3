@@ -6,14 +6,14 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: prod-82022512exam3-cloud-sample
+      app: 82022512exam3-cloud-sample 
   template:
     metadata:
       labels:
-        app: prod-82022512exam3-cloud-sample
+        app: 82022512exam3-cloud-sample 
     spec:
       containers:
-        - name: prod-82022512exam3-cloud-sample
+        - name: 82022512exam3-cloud-sample 
           image: ceappacr.azurecr.io/82022512exam3
           ports:
           - containerPort: 8080
