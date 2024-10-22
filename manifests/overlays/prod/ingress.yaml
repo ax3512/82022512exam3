@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: 82022512exam3-cloud-sample-ingress
+  name: cloud-sample-ingress
 spec:
   ingressClassName: ingress-internal
   rules:
