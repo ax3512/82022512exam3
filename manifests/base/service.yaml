@@ -6,4 +6,4 @@ spec:
     ports:
     - port: 8080 
     selector:
-        app: cloud-sample
+        app: 82022512exam3-cloud-sample 
