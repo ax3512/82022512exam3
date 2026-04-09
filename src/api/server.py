@@ -316,30 +316,35 @@ def ask(req: AskRequest):
             )
 
         if ctx["type"] == "followup" and session_id and session_id in _session_cache:
-            # ── 연계질문: 캐시된 필터링 결과 + 대화이력으로 LLM 1회 ──
+            # ── 연계질문: 이전 DR의 전체 섹션 + 대화이력으로 답변 ──
             cached = _session_cache[session_id]
-            print(f"  ⏩ 세션 캐시 사용 (필터링 재사용) — DR: {cached['dr_numbers']}")
-            print(f"  📝 대화이력: {len(req.chat_history)}턴")
+            print(f"  ⏩ 연계질문 → 이전 DR {cached['dr_numbers']} 전체 섹션 조회")
+
+            results = []
+            for dr in cached["dr_numbers"]:
+                sections = store.get_sections_by_dr(dr)
+                for sec in sections:
+                    results.append({"section": sec, "score": 1.0})
 
             chat_history = [{"role": m.role, "content": m.content} for m in req.chat_history]
 
-            response = answer_gen.generate_followup(
+            response = answer_gen.generate(
                 question=req.question,
-                filtered_context=cached["filtered_context"],
-                chat_history=chat_history,
+                search_results=results,
                 cancel_check=cancel_check,
+                prev_question=prev_question,
+                prev_answer=prev_answer,
             )
 
-            from src.engine.answer import classify_question as _classify_q
             return AskResponse(
                 answer=response["answer"],
-                sources=cached["sources"],
+                sources=response.get("sources", cached["sources"]),
                 context_type="followup",
                 session_id=session_id,
-                question_type=_classify_q(req.question),
+                question_type=response.get("question_type", ""),
             )
 
-        elif ctx["type"] == "followup" and ctx.get("dr_numbers"):
+        if ctx["type"] == "followup" and ctx.get("dr_numbers") and not (session_id and session_id in _session_cache):
             # ── 연계질문이지만 세션 캐시 없음 (하위호환): 기존 방식 ──
             print(f"  ⏩ 캐시 없음 → 이전 DR {ctx['dr_numbers']} 섹션 직접 조회")
             results = []

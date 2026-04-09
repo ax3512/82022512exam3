@@ -92,18 +92,32 @@ def search(
                 cat_drs.append(dr)
         print(f"  카테고리 매칭: {matched_cat_ids} → {len(set(cat_drs))}개 DR")
 
-    # ── B) 키워드 검색 (제목) ──
-    # 질문에서 핵심 키워드 추출 (DR번호 제외, 2글자 이상)
+    # ── B) 키워드 검색 (제목 + 섹션 summary/content) ──
     q_clean = re.sub(r'DR-\d{4}-\d{4,6}', '', question)
     q_clean = re.sub(r'[SR과제찾아줘있어알려줘개발관련목록내용뭐야어떻게]', '', q_clean)
     keywords = [w for w in q_clean.split() if len(w) >= 2]
+
+    # 기술 키워드 추출 (테이블명, 소스코드명 패턴)
+    tech_keywords = re.findall(r'[A-Z][A-Z_]{3,}[A-Z]', question, re.IGNORECASE)  # XX_YYY_ZZZ
+    tech_keywords += re.findall(r'[A-Z][a-z]+(?:[A-Z][a-z]+)+(?:SO|JO|BO)', question)  # XxxYyySO
+
     kw_drs = []
+    # 제목 검색
     for kw in keywords:
         docs = store.find_documents_by_title(kw)
         for doc in docs:
             dr = doc.get("dr_number", "")
             _add_dr(dr, 0.9, "keyword")
             kw_drs.append(dr)
+
+    # 기술 키워드 → 섹션 summary/content 검색
+    for tk in tech_keywords:
+        docs = store.find_sections_by_keyword(tk)
+        for doc in docs:
+            dr = doc.get("dr_number", "")
+            _add_dr(dr, 0.95, "tech_keyword")
+            kw_drs.append(dr)
+
     if kw_drs:
         print(f"  키워드 검색: {keywords} → {len(set(kw_drs))}개 DR")
 
