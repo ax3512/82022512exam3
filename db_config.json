@@ -1,0 +1,20 @@
+{
+  "active_db_type": "postgres",
+  "db_postgres": {
+    "user": "postgres",
+    "password": "postgres",
+    "host": "127.0.0.1",
+    "port": "5433",
+    "dbname": "postgres"
+  },
+  "db_oracle": {
+    "user": "system",
+    "password": "oracle",
+    "host": "localhost",
+    "port": "1521",
+    "service_name": "ORCL",
+    "sid": null,
+    "thick_mode": false,
+    "oracle_client_lib_dir": null
+  }
+}
