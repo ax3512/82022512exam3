@@ -137,6 +137,22 @@ class PgStore:
         finally:
             self._put(conn)
 
+    def find_sections_by_keyword(self, keyword: str) -> list[dict[str, Any]]:
+        """섹션 summary/content에서 키워드 검색 → 해당 DR 목록 반환."""
+        conn = self._conn()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT DISTINCT s.dr_number, d.title, d.target_year_month
+                    FROM sections s
+                    JOIN documents d ON d.dr_number = s.dr_number AND d.target_year_month = s.target_year_month
+                    WHERE s.summary ILIKE %s OR s.content ILIKE %s
+                    ORDER BY s.dr_number
+                """, (f"%{keyword}%", f"%{keyword}%"))
+                return [dict(r) for r in cur.fetchall()]
+        finally:
+            self._put(conn)
+
     def delete_document(self, dr_number: str, target_year_month: str = None) -> int:
         """문서 삭제 (CASCADE로 sections도 자동 삭제).
         target_year_month 지정 시 해당 버전만, 없으면 해당 DR 전체 삭제."""
