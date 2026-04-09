@@ -1,0 +1,28 @@
+# 임베딩 모델 (install.bat에서 자동 다운로드)
+models/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+.vscode/
+
+# 테스트 결과
+tests/__pycache__/
+
+# Python 설치파일 (용량 큼, 별도 관리)
+python-installer/*.exe
+
+# 민감정보 (API 키, DB 비밀번호)
+config.yaml
+db_config.json
+
+# venv 바이너리
+scripts/aa/
+
+# 압축파일
+*.zip
+*.tar.gz

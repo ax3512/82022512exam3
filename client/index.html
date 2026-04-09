@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IA Analysis Platform</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+    <link rel="stylesheet" href="/css/style.css?v=42">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 사이드바 -->
+        <aside id="sidebar">
+            <h2>📋 IA Analysis Platform</h2>
+            <nav>
+                <button class="nav-btn active" data-page="review">🔍 영향도검토</button>
+                <button class="nav-btn" data-page="chat">💬 채팅</button>
+                <button class="nav-btn" data-page="documents">📄 문서목록</button>
+                <button class="nav-btn" data-page="load">📂 문서적재</button>
+                <button class="nav-btn" data-page="graph">📊 IA관계 시각화</button>
+                <button class="nav-btn" data-page="category">🏷️ 업무분류</button>
+                <button class="nav-btn" data-page="settings">⚙️ 환경설정</button>
+            </nav>
+            <div id="stats" class="stats"></div>
+            <div id="chat-fab" class="chat-fab-sidebar" onclick="_toggleChatPopup()">
+                <span class="chat-fab-icon">🤖</span>
+                <span class="chat-fab-label">챗봇</span>
+            </div>
+        </aside>
+
+        <!-- 메인 -->
+        <main id="main">
+            <!-- 영향도검토 페이지 -->
+            <section id="page-review" class="page active">
+                <div class="review-header">
+                    <h2>요구사항 입력</h2>
+                    <p class="review-subtitle">개발 요구사항을 입력하면, 과거 IA 설계문서를 기반으로 <span class="hl-blue">영향도</span> + <span class="hl-green">소스</span> + <span class="hl-purple">테이블</span> 주요 검토 포인트를 가이드합니다.</p>
+                </div>
+                <div class="review-input-area">
+                    <textarea id="review-input" placeholder="예: 신규 단말보험 상품 개발 및 멤버십 할인 연계" rows="4"></textarea>
+                    <div class="review-check-options">
+                        <label class="review-check-item checked">
+                            <input type="checkbox" id="chk-ia" checked>
+                            <span>IA 분석</span>
+                        </label>
+                        <label class="review-check-item disabled">
+                            <input type="checkbox" id="chk-source" disabled>
+                            <span>소스 분석</span>
+                            <span class="review-check-badge">예정</span>
+                        </label>
+                        <label class="review-check-item disabled">
+                            <input type="checkbox" id="chk-table" disabled>
+                            <span>테이블 분석</span>
+                            <span class="review-check-badge">예정</span>
+                        </label>
+                    </div>
+                    <button id="btn-review-start">🔍 분석 시작</button>
+                    <button id="btn-review-stop" style="display:none;">⏹ 분석 중지</button>
+                </div>
+                <div id="review-result" style="display:none;">
+                    <div class="review-split">
+                        <div class="review-guide" id="review-guide">
+                            <h3>📌 IA 분석결과</h3>
+                            <div id="review-guide-content"></div>
+                            <div class="review-disclaimer">※ 위 내용은 과거 IA 설계문서에 기록된 내용 기반입니다. 실제 현행 시스템과 다를 수 있으므로 반드시 확인하세요.</div>
+                        </div>
+                        <div class="review-similar" id="review-similar">
+                            <h3>📎 유사 SR</h3>
+                            <div id="review-similar-list"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="review-loading" style="display:none;" class="review-loading">🤖 AI 분석중...</div>
+            </section>
+
+            <!-- 채팅 페이지 -->
+            <section id="page-chat" class="page">
+                <div id="chat-messages" class="chat-messages">
+                    <div class="message system welcome-msg">
+                        <div class="welcome-title">IA Analysis Platform</div>
+                        <div class="welcome-desc">IA 설계문서에 대해 질문해주세요.</div>
+                        <div class="welcome-examples">
+                            <span class="welcome-ex">"DR-2025-42603 구현방안 알려줘"</span>
+                            <span class="welcome-ex">"단말보험 관련 과제 찾아줘"</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <label class="db-lookup-toggle" title="체크 시 답변에 나온 테이블을 실제 DB에서 조회합니다">
+                        <input type="checkbox" id="db-lookup-check">
+                        <span>🔍 DB 조회</span>
+                    </label>
+                    <textarea id="chat-input" placeholder="질문을 입력하세요... (Shift+Enter: 줄바꿈)" rows="1" autocomplete="off"></textarea>
+                    <button id="chat-send">전송</button>
+                    <button id="chat-stop" style="display:none;">중지</button>
+                </div>
+            </section>
+
+            <!-- 문서목록 페이지 -->
+            <section id="page-documents" class="page">
+                <h2>📄 적재된 문서 목록</h2>
+                <div class="doc-search-bar">
+                    <input type="text" id="doc-search" placeholder="DR번호 또는 제목으로 검색..." autocomplete="off">
+                    <button id="btn-cleanup" title="DR번호 없거나 요약 없는 비정상 문서 정리">🧹 비정상 문서 정리</button>
+                </div>
+                <div id="doc-list" class="doc-list"></div>
+            </section>
+
+            <!-- 문서적재 페이지 -->
+            <section id="page-load" class="page">
+                <h2>📂 문서 적재</h2>
+
+                <!-- 폴더 적재 -->
+                <div class="load-section">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                        <label>폴더 전체 적재:</label>
+                        <label class="db-lookup-toggle" style="margin-left:auto" title="이 폴더 경로를 기본값으로 저장합니다">
+                            <input type="checkbox" id="save-folder-check">
+                            <span>📌 폴더위치 저장</span>
+                        </label>
+                    </div>
+                    <div class="load-input-row">
+                        <input type="text" id="folder-path" placeholder="예: D:\rr" value="D:\rr">
+                        <button id="btn-scan">스캔</button>
+                </div>
+                <div id="scan-result" class="scan-result" style="display:none;"></div>
+                <div id="load-progress" class="load-progress" style="display:none;"></div>
+
+                <hr style="border-color:var(--border);margin:20px 0;">
+
+                <!-- 개별 파일 적재 -->
+                <div class="load-section">
+                    <label>개별 파일 적재:</label>
+                    <div class="load-input-row">
+                        <input type="text" id="file-path" placeholder="예: D:\rr\파일명.docx 또는 .pdf">
+                        <button id="btn-load-file">적재</button>
+                    </div>
+                </div>
+                <div id="file-load-progress" class="load-progress" style="display:none;"></div>
+            </section>
+
+            <!-- 환경설정 페이지 -->
+            <section id="page-settings" class="page">
+                <h2>⚙️ 환경설정</h2>
+
+                <!-- LLM 설정 -->
+                <h3 style="margin-bottom:14px;">🤖 LLM 설정</h3>
+                <div class="db-config-section">
+                    <div class="db-form">
+                        <div class="form-row">
+                            <label>API URL</label>
+                            <input type="text" id="llm-api-url" placeholder="https://api.example.com/v1">
+                        </div>
+                        <div class="form-row">
+                            <label>API Key</label>
+                            <input type="password" id="llm-api-key" placeholder="app-xxxx...">
+                        </div>
+                    </div>
+                    <div class="db-actions">
+                        <button id="btn-llm-save" class="btn-primary">💾 저장</button>
+                    </div>
+                    <div id="llm-status" class="db-status"></div>
+                </div>
+
+                <hr style="border-color:var(--border);margin:24px 0;">
+
+                <!-- DB 연결 설정 -->
+                <h3 style="margin-bottom:14px;">🔌 DB 연결 설정</h3>
+                <div class="db-config-section">
+                    <div class="db-type-selector">
+                        <label>DB 타입:</label>
+                        <select id="db-type-select">
+                            <option value="postgres">PostgreSQL</option>
+                            <option value="oracle">Oracle</option>
+                        </select>
+                    </div>
+
+                    <!-- PostgreSQL 설정 -->
+                    <div id="pg-config" class="db-form">
+                        <div class="form-row">
+                            <label>Host</label>
+                            <input type="text" id="pg-host" value="localhost">
+                        </div>
+                        <div class="form-row">
+                            <label>Port</label>
+                            <input type="text" id="pg-port" value="5432">
+                        </div>
+                        <div class="form-row">
+                            <label>Database</label>
+                            <input type="text" id="pg-dbname" value="postgres">
+                        </div>
+                        <div class="form-row">
+                            <label>User</label>
+                            <input type="text" id="pg-user" value="postgres">
+                        </div>
+                        <div class="form-row">
+                            <label>Password</label>
+                            <input type="password" id="pg-password" value="postgres">
+                        </div>
+                    </div>
+
+                    <!-- Oracle 설정 -->
+                    <div id="ora-config" class="db-form" style="display:none;">
+                        <div class="form-row">
+                            <label>Host</label>
+                            <input type="text" id="ora-host" value="localhost">
+                        </div>
+                        <div class="form-row">
+                            <label>Port</label>
+                            <input type="text" id="ora-port" value="1521">
+                        </div>
+                        <div class="form-row">
+                            <label>Service Name</label>
+                            <input type="text" id="ora-service" value="ORCL">
+                        </div>
+                        <div class="form-row">
+                            <label>SID <small>(선택)</small></label>
+                            <input type="text" id="ora-sid" placeholder="비워두면 Service Name 사용">
+                        </div>
+                        <div class="form-row">
+                            <label>User</label>
+                            <input type="text" id="ora-user" value="system">
+                        </div>
+                        <div class="form-row">
+                            <label>Password</label>
+                            <input type="password" id="ora-password" value="oracle">
+                        </div>
+                        <div class="form-row">
+                            <label>
+                                <input type="checkbox" id="ora-thick"> Thick Mode (Oracle 11g)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="db-actions">
+                        <button id="btn-db-save" class="btn-primary">💾 저장</button>
+                        <button id="btn-db-test" class="btn-secondary">🔗 연결 테스트</button>
+                    </div>
+                    <div id="db-status" class="db-status"></div>
+                </div>
+            </section>
+
+            <!-- 업무분류 페이지 -->
+            <section id="page-category" class="page">
+                <div class="cat-page-header">
+                    <h2>🗂️ 업무분류 관리</h2>
+                    <div class="cat-header-actions">
+                        <button id="btn-retag-all" class="btn-secondary btn-sm" title="기존 적재 문서에 카테고리를 일괄 (재)태깅합니다">🏷️ 기존문서 일괄태깅</button>
+                        <button id="btn-toggle-all" class="btn-secondary btn-sm">📂 전체 펼치기</button>
+                        <button id="btn-add-root" class="btn-primary btn-sm">➕ 대분류 추가</button>
+                    </div>
+                </div>
+                <div id="category-tree" class="cat-tree"></div>
+            </section>
+
+            <!-- 시각화 페이지 -->
+            <section id="page-graph" class="page">
+                <div class="graph-page-header">
+                    <h2>📊 카테고리-문서 관계도</h2>
+                    <div class="graph-header-actions">
+                        <input type="text" id="dr-search-input" placeholder="DR번호 검색..." autocomplete="off" style="width:200px;">
+                        <button id="btn-dr-search" class="btn-secondary btn-sm">🔍</button>
+                    </div>
+                </div>
+                <div id="dr-search-result"></div>
+                <div id="explore-breadcrumb" class="explore-breadcrumb"><span class="explore-crumb active">전체</span></div>
+                <div class="graph-split">
+                    <div id="graph-container"></div>
+                    <div id="graph-detail" class="graph-detail" style="display:none;">
+                        <div class="graph-detail-header">
+                            <span id="graph-detail-title"></span>
+                            <button id="graph-detail-close" title="닫기">✕</button>
+                        </div>
+                        <div id="graph-detail-body" class="graph-detail-body"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+
+    <!-- 챗봇 팝업 -->
+    <div id="chat-popup" class="chat-popup" style="display:none;">
+        <div class="chat-popup-header" id="chat-popup-header">
+            <span>챗봇</span>
+            <div class="chat-popup-header-btns">
+                <button onclick="_toggleChatFullscreen()" title="전체화면" id="chat-fullscreen-btn">⛶</button>
+                <button onclick="_toggleChatPopup()" title="닫기">✕</button>
+            </div>
+        </div>
+        <div class="chat-popup-messages" id="popup-chat-messages"></div>
+        <div class="chat-popup-input">
+            <label class="popup-db-toggle" title="DB 조회 모드">
+                <input type="checkbox" id="popup-db-check">
+                <span>DB 조회</span>
+            </label>
+            <textarea id="popup-chat-input" placeholder="질문을 입력하세요... (Shift+Enter: 줄바꿈)" rows="1"></textarea>
+            <button id="popup-chat-send">전송</button>
+        </div>
+    </div>
+
+    <script src="/js/app.js?v=37"></script>
+</body>
+</html>

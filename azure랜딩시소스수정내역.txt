@@ -1,0 +1,62 @@
+========================================
+ Azure DB 랜딩 시 소스 수정 내역
+========================================
+
+[수정 파일: 총 2개]
+
+
+1. config.yaml
+----------------------------------------
+postgresql 부분만 변경 (나머지는 그대로 유지)
+
+변경 전:
+  storage:
+    postgresql:
+      host: localhost
+      port: 5434
+      dbname: ia_chatbot
+      user: postgres
+      password: postgres
+
+변경 후:
+  storage:
+    postgresql:
+      host: pgdb-az01-dev-codi-01.privatelink.postgres.database.azure.com
+      port: 5432
+      dbname: pg_vector_ict
+      user: ictapp01
+      password: ict0326!
+
+
+2. src/storage/pg_store.py
+----------------------------------------
+19번째 줄 한 줄만 변경
+
+변경 전:
+  self.pool = SimpleConnectionPool(min_conn, max_conn, dsn)
+
+변경 후:
+  self.pool = SimpleConnectionPool(min_conn, max_conn, dsn + " channel_binding=disable sslmode=require options='-c search_path=public'")
+
+
+[준비된 파일 위치 (사외 PC)]
+  C:\Users\my\config_azure.yaml  -> 사내 PC config.yaml로 덮어쓰기
+  C:\Users\my\pg_store.py        -> 사내 PC src\storage\pg_store.py로 덮어쓰기
+
+
+[적용 순서]
+  1. 위 2개 파일 사내 PC로 복사
+  2. config_azure.yaml -> config.yaml로 이름 변경하여 덮어쓰기
+  3. pg_store.py -> src/storage/pg_store.py 덮어쓰기
+  4. 서버 재시작 (start.bat)
+
+
+[Azure DB 초기화 (최초 1회)]
+  psql 접속 후 init_azure_db.sql 실행
+  또는 psql에서 직접 테이블 생성 (documents, sections, feedback, document_categories)
+
+
+[참고]
+  - 이 PC (사외)는 로컬 PostgreSQL (localhost:5434) 사용
+  - 사내 PC만 Azure DB로 랜딩
+  - vector 확장은 Azure DB public 스키마에 이미 설치됨
