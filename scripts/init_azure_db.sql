@@ -1,7 +1,13 @@
 SET search_path TO public;
 
+-- 기존 테이블 삭제 (순서 중요: FK 의존성)
+DROP TABLE IF EXISTS document_categories CASCADE;
+DROP TABLE IF EXISTS feedback CASCADE;
+DROP TABLE IF EXISTS sections CASCADE;
+DROP TABLE IF EXISTS documents CASCADE;
+
 -- 1) documents 테이블 (복합 PK: dr_number + target_year_month)
-CREATE TABLE IF NOT EXISTS documents (
+CREATE TABLE documents (
     dr_number       TEXT NOT NULL,
     target_year_month TEXT NOT NULL DEFAULT '',
     title           TEXT DEFAULT '',
@@ -16,7 +22,7 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 
 -- 2) sections 테이블
-CREATE TABLE IF NOT EXISTS sections (
+CREATE TABLE sections (
     section_id      TEXT PRIMARY KEY,
     dr_number       TEXT NOT NULL,
     target_year_month TEXT NOT NULL DEFAULT '',
@@ -36,12 +42,12 @@ CREATE TABLE IF NOT EXISTS sections (
     FOREIGN KEY (dr_number, target_year_month) REFERENCES documents(dr_number, target_year_month) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_sections_dr ON sections(dr_number);
-CREATE INDEX IF NOT EXISTS idx_sections_dr_ym ON sections(dr_number, target_year_month);
-CREATE INDEX IF NOT EXISTS idx_sections_embedding ON sections USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX idx_sections_dr ON sections(dr_number);
+CREATE INDEX idx_sections_dr_ym ON sections(dr_number, target_year_month);
+CREATE INDEX idx_sections_embedding ON sections USING hnsw (embedding vector_cosine_ops);
 
 -- 3) feedback 테이블
-CREATE TABLE IF NOT EXISTS feedback (
+CREATE TABLE feedback (
     feedback_id     TEXT PRIMARY KEY,
     question        TEXT DEFAULT '',
     rating          TEXT DEFAULT '',
@@ -53,7 +59,7 @@ CREATE TABLE IF NOT EXISTS feedback (
 );
 
 -- 4) document_categories 테이블
-CREATE TABLE IF NOT EXISTS document_categories (
+CREATE TABLE document_categories (
     dr_number       TEXT NOT NULL,
     target_year_month TEXT NOT NULL DEFAULT '',
     category_id     TEXT NOT NULL,
@@ -63,4 +69,4 @@ CREATE TABLE IF NOT EXISTS document_categories (
     FOREIGN KEY (dr_number, target_year_month) REFERENCES documents(dr_number, target_year_month) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_doc_categories_cat ON document_categories(category_id);
+CREATE INDEX idx_doc_categories_cat ON document_categories(category_id);
