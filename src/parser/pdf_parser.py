@@ -241,7 +241,7 @@ def parse_pdf(file_path: str | Path, target_part: str = "") -> ParseResult:
 
     if not boundaries:
         # 파트 태그가 없으면 BILL 단독 문서 — 섹션 번호로 직접 분할
-        print(f"  ⚠️ 파트 태그 미감지 → BILL 단독 문서로 처리")
+        print(f"  ⚠️ 파트 태그 미감지 → {target_part or 'unknown'} 단독 문서로 처리")
         # 섹션 번호 패턴으로 boundary 생성: "1.\nISSUE" 또는 "2.\n 사용자 관점"
         for i, line in enumerate(all_lines):
             stripped = line.strip()
