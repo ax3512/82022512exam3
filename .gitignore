@@ -16,8 +16,6 @@ tests/__pycache__/
 # Python 설치파일 (용량 큼, 별도 관리)
 python-installer/*.exe
 
-# venv 바이너리
-scripts/aa/
 
 # 압축파일
 *.zip
